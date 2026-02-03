@@ -2,78 +2,48 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PT Motorsport Keypad Pro</title>
     <style>
         body { background: #0b0b0b; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #header { height: 50px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .dots { font-size: 28px; cursor: pointer; color: #888; padding: 0 20px; }
-        .grid { display: grid; gap: 8px; padding: 10px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 50px); }
-        .btn { background: #181818; border: 2px solid #333; border-radius: 10px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: transform 0.1s; overflow: hidden; -webkit-user-select: none; user-select: none; }
-        .btn:active { transform: scale(0.96); background: #222; }
-        .led-bar { display: none; gap: 4px; position: absolute; top: 6px; background: rgba(0,0,0,0.5); padding: 3px 6px; border-radius: 15px; }
-        .ind { width: 7px; height: 7px; border-radius: 50%; background: #222; }
-        .g-on { background: #0f0 !important; box-shadow: 0 0 8px #0f0; }
-        .y-on { background: #ffea00 !important; box-shadow: 0 0 8px #ffea00; }
-        .r-on { background: #f00 !important; box-shadow: 0 0 8px #f00; }
-        .glow-1 { border-color: #0f0 !important; box-shadow: inset 0 0 10px #0f04, 0 0 10px #0f0; }
-        .glow-2 { border-color: #0088ff !important; box-shadow: inset 0 0 10px #0088ff4, 0 0 10px #0088ff; }
-        .glow-4 { border-color: #f00 !important; box-shadow: inset 0 0 10px #f004, 0 0 10px #f00; }
-        #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 100; overflow-y: auto; padding: 20px 0; }
-        .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: auto; text-align: left; }
-        .save-btn { background: #0066ff; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; }
-        label { font-size: 0.75em; color: #888; margin-top: 12px; display: block; font-weight: bold; text-transform: uppercase; }
-        select, input { width: 100%; padding: 12px; margin: 5px 0 15px 0; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; }
+        .grid { display: grid; gap: 10px; padding: 12px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 50px); }
+        .btn { background: #181818; border: 2px solid #333; border-radius: 12px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: transform 0.1s; -webkit-user-select: none; }
+        .btn:active { transform: scale(0.95); background: #222; }
+        .led-bar { display: none; gap: 4px; position: absolute; top: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; }
+        .ind { width: 8px; height: 8px; border-radius: 50%; background: #222; }
+        .g-on { background: #0f0; box-shadow: 0 0 10px #0f0; }
+        .y-on { background: #ffea00; box-shadow: 0 0 10px #ffea00; }
+        .r-on { background: #f00; box-shadow: 0 0 10px #f00; }
+        .glow-1 { border-color: #0f0; box-shadow: inset 0 0 12px #0f03, 0 0 12px #0f0; }
+        #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 100; overflow-y: auto; }
+        .menu-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 85%; max-width: 400px; margin: 40px auto; text-align: left; border: 1px solid #333; }
+        label { font-size: 0.7em; color: #666; margin-top: 15px; display: block; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        select, input { width: 100%; padding: 14px; margin: 8px 0 18px 0; background: #222; color: #fff; border: 1px solid #333; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        .save-btn { background: #0066ff; color: #fff; border: none; padding: 16px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body onresize="previewUI()">
-
-    <div id="connectOverlay">
-        <button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:10px; font-weight:bold;" onclick="initBLE()">CONNECT KEYPAD</button>
-    </div>
-
-    <div id="header">
-        <div style="width:40px"></div>
-        <span id="keypadTitle">Keypad</span>
-        <span class="dots" onclick="openMenu()">&#8942;</span>
-    </div>
-    
+    <div id="header"><div style="width:40px"></div><span id="keypadTitle">Keypad</span><span class="dots" onclick="openMenu()">&#8942;</span></div>
     <div id="mainGrid" class="grid"></div>
-
-    <div id="settingsOverlay">
-        <div class="menu-box">
-            <label>Keypad Model</label>
-            <select id="modelSelect" onchange="updateMenuOptions(); previewUI();">
-                <option value="0">Haltech 2x4</option>
-                <option value="1">Haltech 3x5</option>
-                <option value="2">PKP-2300-SI</option>
-                <option value="3">PKP-2400-SI</option>
-                <option value="4">PKP-2500-SI</option>
-                <option value="5">PKP-3500-SI</option>
-            </select>
-
-            <div id="haltechOnly">
-                <label>Haltech Instance</label>
-                <select id="halInstance">
-                    <option value="12">Instance A (0x0C)</option>
-                    <option value="13">Instance B (0x0D)</option>
-                </select>
-            </div>
-
-            <label>Node ID (Hex)</label>
-            <input type="text" id="nodeId" value="15">
-
-            <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
-            <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Close</p>
+    <div id="settingsOverlay"><div class="menu-box">
+        <button class="save-btn" style="background:#333; margin-bottom:20px" onclick="toggleFS()">TOGGLE FULLSCREEN</button>
+        <label>Keypad Model</label>
+        <select id="modelSelect" onchange="updateOptions(); previewUI();">
+            <option value="0">Haltech 2x4</option><option value="1" selected>Haltech 3x5</option>
+            <option value="2">PKP-2300-SI</option><option value="3">PKP-2400-SI</option>
+            <option value="4">PKP-2500-SI</option><option value="5">PKP-3500-SI</option>
+        </select>
+        <div id="halExtras">
+            <label>Haltech Instance</label>
+            <select id="halInst"><option value="12">Instance A (0x0C)</option><option value="13">Instance B (0x0D)</option></select>
         </div>
-    </div>
+        <label>Node ID (Hex)</label>
+        <input type="text" id="nodeId" value="15">
+        <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
+    </div></div>
 
 <script>
-    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-    const RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-    const TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     let rxChar, bleDevice;
-
     const models = [
         { name: "Haltech 2x4", btns: 8, pCols: 2, lCols: 4, type: 'ht' },
         { name: "Haltech 3x5", btns: 15, pCols: 3, lCols: 5, type: 'ht' },
@@ -85,65 +55,45 @@
 
     async function initBLE() {
         try {
-            bleDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: [SERVICE_UUID]
-            });
+            bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ["6e400001-b5a3-f393-e0a9-e50e24dcca9e"] });
             const server = await bleDevice.gatt.connect();
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            rxChar = await service.getCharacteristic(RX_UUID);
-            const txChar = await service.getCharacteristic(TX_UUID);
-            await txChar.startNotifications();
-            txChar.addEventListener('characteristicvaluechanged', (e) => {
-                const data = new Uint8Array(e.target.value.buffer);
-                updateLEDs(data);
-            });
-            document.getElementById('connectOverlay').style.display = 'none';
+            const service = await server.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+            rxChar = await service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
+            const tx = await service.getCharacteristic("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
+            await tx.startNotifications();
+            tx.addEventListener('characteristicvaluechanged', (e) => updateLEDs(new Uint8Array(e.target.value.buffer)));
             saveSettings();
-        } catch (e) { alert(e); }
-    }
-
-    function updateMenuOptions() {
-        const m = models[document.getElementById("modelSelect").value];
-        document.getElementById("haltechOnly").style.display = (m.type === 'ht') ? 'block' : 'none';
+        } catch (e) { console.log(e); }
     }
 
     function previewUI() {
-        const mIdx = document.getElementById("modelSelect").value;
-        const config = models[mIdx];
-        const cols = (window.innerHeight > window.innerWidth) ? config.pCols : config.lCols;
-        document.getElementById("keypadTitle").innerText = config.name;
+        const m = models[document.getElementById("modelSelect").value];
         const grid = document.getElementById("mainGrid");
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        grid.style.gridTemplateColumns = `repeat(${(window.innerHeight > window.innerWidth)?m.pCols:m.lCols}, 1fr)`;
         grid.innerHTML = "";
-        for (let i = 0; i < config.btns; i++) {
-            const savedName = localStorage.getItem(`label_${mIdx}_${i}`) || (i + 1);
-            let content = `<span id="lbl_${i}">${savedName}</span>`;
-            if (config.type === 'ht') content = `<div class="led-bar" style="display:flex"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div>` + content;
+        for (let i = 0; i < m.btns; i++) {
+            let content = `<span>${localStorage.getItem(`L_${m.name}_${i}`) || (i+1)}</span>`;
+            if (m.type === 'ht') content = `<div class="led-bar" style="display:flex"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div>` + content;
             grid.innerHTML += `<div id="btn_${i}" class="btn" onclick="sendPress(${i})">${content}</div>`;
         }
     }
 
-    function sendPress(i) {
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode("P" + i));
-    }
-
+    function sendPress(i) { if(rxChar) rxChar.writeValue(new TextEncoder().encode("P"+i)); else initBLE(); }
+    
     function saveSettings() {
         const mIdx = document.getElementById("modelSelect").value;
-        const nodeId = document.getElementById("nodeId").value;
-        const inst = document.getElementById("halInstance").value;
+        const nid = document.getElementById("nodeId").value;
+        const inst = document.getElementById("halInst").value;
         const type = models[mIdx].type === 'ht' ? 0 : 1;
-        // Packet: C,ModelIndex,NodeIDHex,ProtocolType,InstanceHex
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${nodeId},${type},${inst}`));
-        closeMenu(); previewUI();
+        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${nid},${type},${inst}`));
+        document.getElementById("settingsOverlay").style.display = "none"; previewUI();
     }
 
     function updateLEDs(data) {
         const m = models[document.getElementById("modelSelect").value];
         for (let i = 0; i < m.btns; i++) {
-            const v = data[i];
-            const b = document.getElementById(`btn_${i}`); if (!b) continue;
-            if (m.type === 'blink') b.className = "btn " + (v > 0 ? "glow-" + v : "");
+            const v = data[i], b = document.getElementById(`btn_${i}`); if (!b) continue;
+            if (m.type === 'blink') b.className = "btn " + (v > 0 ? "glow-1" : "");
             else {
                 document.getElementById(`g_${i}`).className = "ind" + (v&1?" g-on":"");
                 document.getElementById(`y_${i}`).className = "ind" + (v&2?" y-on":"");
@@ -152,8 +102,9 @@
         }
     }
 
-    function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
-    function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
+    function updateOptions() { document.getElementById("halExtras").style.display = models[document.getElementById("modelSelect").value].type === 'ht' ? 'block' : 'none'; }
+    function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateOptions(); }
+    function toggleFS() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
     previewUI();
 </script>
 </body>
