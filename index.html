@@ -15,7 +15,6 @@
         .g-on { background: #0f0 !important; box-shadow: 0 0 10px #0f0; }
         .y-on { background: #ffea00 !important; box-shadow: 0 0 10px #ffea00; }
         .r-on { background: #f00 !important; box-shadow: 0 0 10px #f00; }
-        /* Blink RGB Colors */
         .glow-1 { border-color: #0f0 !important; box-shadow: 0 0 12px #0f0; }
         .glow-2 { border-color: #0088ff !important; box-shadow: 0 0 12px #0088ff; }
         .glow-3 { border-color: #0ff !important; box-shadow: 0 0 12px #0ff; }
@@ -41,16 +40,27 @@
         <div class="menu-box">
             <label>CAN BUS SPEED</label>
             <select id="canSpeed"><option value="0">125k</option><option value="1">250k</option><option value="2">500k</option><option value="3" selected>1000k (1Mbps)</option></select>
+            
             <label>Keypad Model</label>
-            <select id="modelSelect" onchange="updateMenuOptions(); previewUI();">
-                <option value="0">Haltech 2x4</option><option value="1">Haltech 3x5</option>
-                <option value="2">PKP-2300-SI</option><option value="3">PKP-2400-SI</option><option value="4">PKP-2500-SI</option><option value="5">PKP-3500-SI</option>
+            <select id="modelSelect" onchange="updateMenuOptions();">
+                <option value="0">Haltech 2x4</option>
+                <option value="1">Haltech 3x5</option>
+                <option value="2">PKP-2300-SI</option>
+                <option value="3">PKP-2400-SI</option>
+                <option value="4">PKP-2500-SI</option>
+                <option value="5">PKP-3500-SI</option>
             </select>
-            <div id="haltechOnly">
+
+            <div id="haltechOnly" style="display:none;">
                 <label>Keypad Assignment</label>
                 <select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select>
             </div>
-            <div id="nodeIdDiv"><label>Node ID (Hex)</label><input type="text" id="nodeId" value="15"></div>
+
+            <div id="nodeIdDiv">
+                <label>Node ID (Hex)</label>
+                <input type="text" id="nodeId" value="15">
+            </div>
+
             <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
             <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Cancel</p>
         </div>
@@ -104,9 +114,10 @@
 
     function saveSettings() {
         const mIdx = document.getElementById("modelSelect").value;
+        const m = models[mIdx];
         const side = document.getElementById("halSide").value;
-        const type = (models[mIdx].type === 'ht') ? 0 : 1;
-        let inst = "15";
+        const type = (m.type === 'ht') ? 0 : 1;
+        let inst = "15"; 
         if (type === 0) {
             if (mIdx == "0") inst = (side === "A") ? "0A" : "0B";
             else inst = (side === "A") ? "0C" : "0D";
@@ -116,10 +127,10 @@
     }
 
     function updateLEDs(data) {
-        const type = models[document.getElementById("modelSelect").value].type;
-        for (let i = 0; i < 15; i++) {
+        const m = models[document.getElementById("modelSelect").value];
+        for (let i = 0; i < m.btns; i++) {
             const v = data[i]; const b = document.getElementById(`btn_${i}`); if (!b) continue;
-            if (type === 'blink') {
+            if (m.type === 'blink') {
                 b.className = "btn"; if (v > 0 && v <= 7) b.classList.add("glow-" + v);
             } else {
                 const g = document.getElementById(`g_${i}`); const y = document.getElementById(`y_${i}`); const r = document.getElementById(`r_${i}`);
@@ -131,10 +142,12 @@
     }
 
     function updateMenuOptions() {
-        const isHT = models[document.getElementById("modelSelect").value].type === 'ht';
-        document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none';
-        document.getElementById("nodeIdDiv").style.display = isHT ? 'none' : 'block';
+        const mIdx = document.getElementById("modelSelect").value;
+        const m = models[mIdx];
+        document.getElementById("haltechOnly").style.display = (m.type === 'ht') ? 'block' : 'none';
+        document.getElementById("nodeIdDiv").style.display = (m.type === 'ht') ? 'none' : 'block';
     }
+
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
     previewUI();
