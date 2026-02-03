@@ -8,21 +8,26 @@
         #header { height: 50px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .dots { font-size: 28px; cursor: pointer; color: #888; padding: 0 20px; }
         .grid { display: grid; gap: 10px; padding: 12px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 50px); }
+        
         .btn { background: #181818; border: 2px solid #333; border-radius: 12px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.1s; user-select: none; }
         .btn:active { transform: scale(0.95); background: #222; }
+        
         .led-bar { display: none; gap: 4px; position: absolute; top: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; }
         .ind { width: 8px; height: 8px; border-radius: 50%; background: #222; }
+        
+        /* Haltech Indicator Dots */
         .g-on { background: #0f0 !important; box-shadow: 0 0 10px #0f0; }
         .y-on { background: #ffea00 !important; box-shadow: 0 0 10px #ffea00; }
         .r-on { background: #f00 !important; box-shadow: 0 0 10px #f00; }
-        /* GLOW CLASSES */
-        .glow-1 { border-color: #0f0 !important; box-shadow: 0 0 10px #0f0; }
-        .glow-2 { border-color: #00f !important; box-shadow: 0 0 10px #00f; }
-        .glow-3 { border-color: #0ff !important; box-shadow: 0 0 10px #0ff; }
-        .glow-4 { border-color: #f00 !important; box-shadow: 0 0 10px #f00; }
-        .glow-5 { border-color: #ff0 !important; box-shadow: 0 0 10px #ff0; }
-        .glow-6 { border-color: #f0f !important; box-shadow: 0 0 10px #f0f; }
-        .glow-7 { border-color: #fff !important; box-shadow: 0 0 10px #fff; }
+        
+        /* Blink RGB Color Mapping: 1=G, 2=B, 3=Cyan, 4=R, 5=Magenta, 6=Yellow, 7=White */
+        .glow-1 { border-color: #0f0 !important; box-shadow: inset 0 0 12px #0f03, 0 0 12px #0f0; }
+        .glow-2 { border-color: #0088ff !important; box-shadow: inset 0 0 12px #0088ff3, 0 0 12px #0088ff; }
+        .glow-3 { border-color: #0ff !important; box-shadow: inset 0 0 12px #0ff3, 0 0 12px #0ff; }
+        .glow-4 { border-color: #f00 !important; box-shadow: inset 0 0 12px #f003, 0 0 12px #f00; }
+        .glow-5 { border-color: #f0f !important; box-shadow: inset 0 0 12px #f0f3, 0 0 12px #f0f; }
+        .glow-6 { border-color: #ffea00 !important; box-shadow: inset 0 0 12px #ffea003, 0 0 12px #ffea00; }
+        .glow-7 { border-color: #fff !important; box-shadow: inset 0 0 12px #fff3, 0 0 12px #fff; }
 
         #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
         #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; }
@@ -33,6 +38,7 @@
     </style>
 </head>
 <body onresize="previewUI()">
+
     <div id="connectOverlay">
         <button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:10px; font-weight:bold;" onclick="initBLE()">CONNECT KEYPAD</button>
     </div>
@@ -47,20 +53,27 @@
         <div class="menu-box">
             <label>CAN BUS SPEED</label>
             <select id="canSpeed">
-                <option value="0">125k</option><option value="1">250k</option><option value="2">500k</option><option value="3" selected>1000k</option>
+                <option value="0">125k</option>
+                <option value="1">250k</option>
+                <option value="2">500k</option>
+                <option value="3" selected>1000k (1Mbps)</option>
             </select>
 
             <label>Keypad Model</label>
             <select id="modelSelect" onchange="updateMenuOptions(); previewUI();">
-                <option value="0">Haltech 2x4</option><option value="1" selected>Haltech 3x5</option>
-                <option value="2">PKP-2300-SI</option><option value="3">PKP-2400-SI</option>
-                <option value="4">PKP-2500-SI</option><option value="5">PKP-3500-SI</option>
+                <option value="0">Haltech 2x4</option>
+                <option value="1" selected>Haltech 3x5</option>
+                <option value="2">PKP-2300-SI</option>
+                <option value="3">PKP-2400-SI</option>
+                <option value="4">PKP-2500-SI</option>
+                <option value="5">PKP-3500-SI</option>
             </select>
 
             <div id="haltechOnly">
                 <label>Haltech Keypad Select</label>
                 <select id="halInstance">
-                    <option value="12">Keypad A (0x0C)</option><option value="13">Keypad B (0x0D)</option>
+                    <option value="18A">Keypad A (0x18A)</option>
+                    <option value="18B">Keypad B (0x18B)</option>
                 </select>
             </div>
 
@@ -75,8 +88,11 @@
     </div>
 
 <script>
-    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    const RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+    const TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     let rxChar, bleDevice;
+
     const models = [
         { name: "Haltech 2x4", btns: 8, pCols: 2, lCols: 4, type: 'ht' },
         { name: "Haltech 3x5", btns: 15, pCols: 3, lCols: 5, type: 'ht' },
@@ -88,16 +104,23 @@
 
     async function initBLE() {
         try {
-            bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
+            bleDevice = await navigator.bluetooth.requestDevice({ 
+                acceptAllDevices: true, 
+                optionalServices: [SERVICE_UUID] 
+            });
             const server = await bleDevice.gatt.connect();
             const service = await server.getPrimaryService(SERVICE_UUID);
             rxChar = await service.getCharacteristic(RX_UUID);
             const txChar = await service.getCharacteristic(TX_UUID);
+            
             await txChar.startNotifications();
-            txChar.addEventListener('characteristicvaluechanged', (e) => updateLEDs(new Uint8Array(e.target.value.buffer)));
+            txChar.addEventListener('characteristicvaluechanged', (e) => {
+                updateLEDs(new Uint8Array(e.target.value.buffer));
+            });
+            
             document.getElementById('connectOverlay').style.display = 'none';
             saveSettings(); 
-        } catch (e) { alert(e); }
+        } catch (e) { console.log("BLE Error: ", e); }
     }
 
     function updateMenuOptions() {
@@ -115,40 +138,63 @@
         const grid = document.getElementById("mainGrid");
         grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         grid.innerHTML = "";
+        
         for (let i = 0; i < config.btns; i++) {
             let content = `<span>${i + 1}</span>`;
-            if (config.type === 'ht') content = `<div class="led-bar" style="display:flex"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div>` + content;
+            if (config.type === 'ht') {
+                content = `<div class="led-bar" style="display:flex"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div>` + content;
+            }
             grid.innerHTML += `<div id="btn_${i}" class="btn" onclick="sendPress(${i})">${content}</div>`;
         }
     }
 
-    function sendPress(i) { if (rxChar) rxChar.writeValue(new TextEncoder().encode("P" + i)); }
+    function sendPress(i) {
+        if (rxChar) rxChar.writeValue(new TextEncoder().encode("P" + i));
+    }
 
     function saveSettings() {
-        const mIdx = document.getElementById("modelSelect").value, nid = document.getElementById("nodeId").value, inst = document.getElementById("halInstance").value, speed = document.getElementById("canSpeed").value, type = models[mIdx].type === 'ht' ? 0 : 1;
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${nid},${type},${inst},${speed}`));
-        document.getElementById("settingsOverlay").style.display = "none";
+        const mIdx = document.getElementById("modelSelect").value;
+        const nid = document.getElementById("nodeId").value;
+        const inst = document.getElementById("halInstance").value; // Sends 18A or 18B
+        const speed = document.getElementById("canSpeed").value;
+        const type = models[mIdx].type === 'ht' ? 0 : 1;
+        
+        if (rxChar) {
+            // Packet structure: C,ModelIdx,NodeID,ProtocolType,Instance,Speed
+            const msg = `C,${mIdx},${nid},${type},${inst},${speed}`;
+            rxChar.writeValue(new TextEncoder().encode(msg));
+        }
+        closeMenu();
         previewUI();
     }
 
     function updateLEDs(data) {
         const m = models[document.getElementById("modelSelect").value];
         for (let i = 0; i < m.btns; i++) {
-            const v = data[i], b = document.getElementById(`btn_${i}`);
+            const v = data[i];
+            const b = document.getElementById(`btn_${i}`);
             if (!b) continue;
+
             if (m.type === 'blink') {
-                b.className = "btn " + (v > 0 ? "glow-" + v : "");
+                // Remove all possible color classes
+                b.classList.remove("glow-1", "glow-2", "glow-3", "glow-4", "glow-5", "glow-6", "glow-7");
+                if (v > 0 && v <= 7) b.classList.add("glow-" + v);
             } else {
-                if(document.getElementById(`g_${i}`)) document.getElementById(`g_${i}`).className = "ind" + (v&1?" g-on":"");
-                if(document.getElementById(`y_${i}`)) document.getElementById(`y_${i}`).className = "ind" + (v&2?" y-on":"");
-                if(document.getElementById(`r_${i}`)) document.getElementById(`r_${i}`).className = "ind" + (v&4?" r-on":"");
+                // Haltech 3-dot indicator logic
+                const g = document.getElementById(`g_${i}`);
+                const y = document.getElementById(`y_${i}`);
+                const r = document.getElementById(`r_${i}`);
+                if (g) g.className = "ind" + (v & 1 ? " g-on" : "");
+                if (y) y.className = "ind" + (v & 2 ? " y-on" : "");
+                if (r) r.className = "ind" + (v & 4 ? " r-on" : "");
             }
         }
     }
+
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
+
     previewUI();
 </script>
 </body>
 </html>
-
