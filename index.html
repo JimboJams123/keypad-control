@@ -8,7 +8,7 @@
         #header { height: 50px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .dots { font-size: 28px; cursor: pointer; color: #888; padding: 0 20px; }
         .grid { display: grid; gap: 10px; padding: 12px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 50px); }
-        .btn { background: #181818; border: 2px solid #333; border-radius: 12px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.1s; user-select: none; touch-action: manipulation; }
+        .btn { background: #181818; border: 2px solid #333; border-radius: 12px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.1s; user-select: none; touch-action: none; }
         .btn:active { background: #333; }
         .led-bar { display: none; gap: 4px; position: absolute; top: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; pointer-events: none; }
         .ind { width: 8px; height: 8px; border-radius: 50%; background: #222; }
@@ -22,7 +22,6 @@
         .glow-5 { border-color: #f0f !important; box-shadow: 0 0 12px #f0f; }
         .glow-6 { border-color: #ffea00 !important; box-shadow: 0 0 12px #ffea00; }
         .glow-7 { border-color: #fff !important; box-shadow: 0 0 12px #fff; }
-
         #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
         #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; }
         .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: 20px auto; text-align: left; border: 1px solid #333; }
@@ -40,27 +39,14 @@
         <div class="menu-box">
             <label>CAN BUS SPEED</label>
             <select id="canSpeed"><option value="0">125k</option><option value="1">250k</option><option value="2">500k</option><option value="3" selected>1000k (1Mbps)</option></select>
-            
             <label>Keypad Model</label>
             <select id="modelSelect" onchange="updateMenuOptions();">
-                <option value="0">Haltech 2x4</option>
-                <option value="1">Haltech 3x5</option>
-                <option value="2">PKP-2300-SI</option>
-                <option value="3">PKP-2400-SI</option>
-                <option value="4">PKP-2500-SI</option>
-                <option value="5">PKP-3500-SI</option>
+                <option value="0">Haltech 2x4</option><option value="1">Haltech 3x5</option>
+                <option value="2">PKP-2300-SI</option><option value="3">PKP-2400-SI</option>
+                <option value="4">PKP-2500-SI</option><option value="5">PKP-3500-SI</option>
             </select>
-
-            <div id="haltechOnly" style="display:none;">
-                <label>Keypad Assignment</label>
-                <select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select>
-            </div>
-
-            <div id="nodeIdDiv">
-                <label>Node ID (Hex)</label>
-                <input type="text" id="nodeId" value="15">
-            </div>
-
+            <div id="haltechOnly" style="display:none;"><label>Keypad Assignment</label><select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select></div>
+            <div id="nodeIdDiv"><label>Node ID (Hex)</label><input type="text" id="nodeId" value="15"></div>
             <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
             <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Cancel</p>
         </div>
@@ -71,6 +57,7 @@
     const RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
     const TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     let rxChar, bleDevice;
+    const buttonState = {};
     const models = [
         { name: "Haltech 2x4", btns: 8, pCols: 2, lCols: 4, type: 'ht' },
         { name: "Haltech 3x5", btns: 15, pCols: 3, lCols: 5, type: 'ht' },
@@ -110,18 +97,20 @@
         }
     }
 
-    function sendAction(cmd, i) { if (rxChar) rxChar.writeValue(new TextEncoder().encode(cmd + i)); }
+    function sendAction(cmd, i) {
+        if (!rxChar) return;
+        // Basic throttle: Don't send duplicate same-state commands
+        if (buttonState[i] === cmd) return;
+        buttonState[i] = cmd;
+        rxChar.writeValue(new TextEncoder().encode(cmd + i)).catch(()=>{});
+    }
 
     function saveSettings() {
         const mIdx = document.getElementById("modelSelect").value;
-        const m = models[mIdx];
         const side = document.getElementById("halSide").value;
-        const type = (m.type === 'ht') ? 0 : 1;
-        let inst = "15"; 
-        if (type === 0) {
-            if (mIdx == "0") inst = (side === "A") ? "0A" : "0B";
-            else inst = (side === "A") ? "0C" : "0D";
-        }
+        const type = (models[mIdx].type === 'ht') ? 0 : 1;
+        let inst = "15";
+        if (type === 0) inst = (mIdx == "0") ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D");
         if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},${document.getElementById("canSpeed").value}`));
         closeMenu(); previewUI();
     }
@@ -140,14 +129,11 @@
             }
         }
     }
-
     function updateMenuOptions() {
-        const mIdx = document.getElementById("modelSelect").value;
-        const m = models[mIdx];
+        const m = models[document.getElementById("modelSelect").value];
         document.getElementById("haltechOnly").style.display = (m.type === 'ht') ? 'block' : 'none';
         document.getElementById("nodeIdDiv").style.display = (m.type === 'ht') ? 'none' : 'block';
     }
-
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
     previewUI();
