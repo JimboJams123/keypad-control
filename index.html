@@ -9,215 +9,71 @@
         #header { height: 60px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 0 15px; }
         .dots { font-size: 32px; cursor: pointer; color: #888; padding: 10px; }
         .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 110px); }
-        
-        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: transform 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; }
-        .btn:active { background: #2a2a2a; transform: scale(0.96); border-color: #555; }
-        
-        .btn.edit-ready { border-color: #0066ff; color: #0066ff; border-style: dashed; }
-
-        .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; pointer-events: none; }
-        .ind { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #000; }
-        .g-on { background: #0f0 !important; box-shadow: 0 0 12px #0f0; }
-        .y-on { background: #ffea00 !important; box-shadow: 0 0 12px #ffea00; }
-        .r-on { background: #f00 !important; box-shadow: 0 0 12px #f00; }
-        
+        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; }
+        .btn:active { background: #2a2a2a; transform: scale(0.96); }
+        .btn.edit-ready { border-color: #0066ff !important; border-style: dashed !important; box-shadow: none !important; }
+        .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; }
+        .ind { width: 10px; height: 10px; border-radius: 50%; background: #222; }
+        .g-on { background: #0f0 !important; box-shadow: 0 0 10px #0f0; }
+        .y-on { background: #ffea00 !important; box-shadow: 0 0 10px #ffea00; }
+        .r-on { background: #f00 !important; box-shadow: 0 0 10px #f00; }
         #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
         #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; padding-bottom: 40px; }
         .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: 20px auto; text-align: left; border: 1px solid #333; }
-        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 1.1em; margin-top: 15px; cursor: pointer; }
-        .fs-btn { background: #333; color: white; border: 1px solid #444; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 15px; }
+        .fs-btn { background: #333; color: white; border: 1px solid #444; padding: 12px; width: 100%; border-radius: 8px; margin-top: 20px; }
         label { font-size: 0.75em; color: #888; margin-top: 15px; display: block; font-weight: bold; text-transform: uppercase; }
-        select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; }
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
-        input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.5); }
     </style>
 </head>
-<body onresize="previewUI()">
-
-    <div id="connectOverlay">
-        <button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:12px; font-weight:bold; font-size:1.2em;" onclick="initBLE()">CONNECT KEYPAD</button>
-    </div>
-
-    <div id="header">
-        <div style="width:40px"></div>
-        <h3 id="keypadTitle" style="margin:0;">PT Motorsport</h3>
-        <span class="dots" onclick="openMenu()">&#8942;</span>
-    </div>
-
+<body>
+    <div id="connectOverlay"><button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:12px; font-weight:bold;" onclick="initBLE()">CONNECT KEYPAD</button></div>
+    <div id="header"><div style="width:40px"></div><h3 id="keypadTitle" style="margin:0;">PT MOTORSPORT</h3><span class="dots" onclick="openMenu()">&#8942;</span></div>
     <div id="mainGrid" class="grid"></div>
-
     <div id="settingsOverlay">
         <div class="menu-box">
             <label>Keypad Model</label>
-            <select id="modelSelect" onchange="updateMenuOptions();">
-                <option value="0">Haltech 2x4</option>
-                <option value="1">Haltech 3x5</option>
-                <option value="2">PKP-2300-SI</option>
-                <option value="3">PKP-2400-SI</option>
-                <option value="4">PKP-2500-SI</option>
-                <option value="5">PKP-3500-SI</option>
-            </select>
+            <select id="modelSelect" onchange="updateMenuOptions();"><option value="0">Haltech 2x4</option><option value="1">Haltech 3x5</option><option value="2">PKP-2300-SI</option><option value="3">PKP-2400-SI</option><option value="4">PKP-2500-SI</option><option value="5">PKP-3500-SI</option></select>
             <div id="haltechOnly" style="display:none;"><label>Keypad Assignment</label><select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select></div>
             <div id="nodeIdDiv"><label>Node ID (Hex)</label><input type="text" id="nodeId" value="15"></div>
-
-            <div class="switch-row">
-                <label style="margin:0; color:#0066ff;">Enable Rename Mode</label>
-                <input type="checkbox" id="renameModeCheck" onchange="previewUI()">
-            </div>
-
+            <div class="switch-row"><label style="margin:0; color:#0066ff;">Enable Rename Mode</label><input type="checkbox" id="renameModeCheck" onchange="previewUI()"></div>
             <button id="fullscreenBtn" class="fs-btn" onclick="toggleFullscreen()">ENTER FULLSCREEN</button>
-
             <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
             <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Cancel</p>
         </div>
     </div>
-
 <script>
-    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-    const RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-    const TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-    
-    let rxChar, bleDevice;
-    let globalMask = 0;
-    let pulseInterval = null;
-    let btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
-
-    const models = [
-        { name: "Haltech 2x4", btns: 8, pCols: 2, lCols: 4, type: 'ht' },
-        { name: "Haltech 3x5", btns: 15, pCols: 3, lCols: 5, type: 'ht' },
-        { name: "PKP-2300-SI", btns: 6, pCols: 2, lCols: 3, type: 'blink' },
-        { name: "PKP-2400-SI", btns: 8, pCols: 2, lCols: 4, type: 'blink' },
-        { name: "PKP-2500-SI", btns: 10, pCols: 2, lCols: 5, type: 'blink' },
-        { name: "PKP-3500-SI", btns: 15, pCols: 3, lCols: 5, type: 'blink' }
-    ];
-
+    const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+    let rxChar, bleDevice, globalMask = 0, pulseInterval = null, btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
+    const models = [{name:"Haltech 2x4",btns:8,pCols:2,lCols:4,type:'ht'},{name:"Haltech 3x5",btns:15,pCols:3,lCols:5,type:'ht'},{name:"PKP-2300-SI",btns:6,pCols:2,lCols:3,type:'blink'},{name:"PKP-2400-SI",btns:8,pCols:2,lCols:4,type:'blink'},{name:"PKP-2500-SI",btns:10,pCols:2,lCols:5,type:'blink'},{name:"PKP-3500-SI",btns:15,pCols:3,lCols:5,type:'blink'}];
     async function initBLE() {
-        try {
-            bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
-            const server = await bleDevice.gatt.connect();
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            rxChar = await service.getCharacteristic(RX_UUID);
-            const txChar = await service.getCharacteristic(TX_UUID);
-            await txChar.startNotifications();
-            txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); });
-            document.getElementById('connectOverlay').style.display = 'none';
-            saveSettings(); 
-        } catch (e) { console.error(e); }
+        try { bleDevice = await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE_UUID]}); const server = await bleDevice.gatt.connect(); const service = await server.getPrimaryService(SERVICE_UUID); rxChar = await service.getCharacteristic(RX_UUID); const txChar = await service.getCharacteristic(TX_UUID); await txChar.startNotifications(); txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); }); document.getElementById('connectOverlay').style.display = 'none'; saveSettings(); } catch (e) { console.error(e); }
     }
-
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
-            document.getElementById('fullscreenBtn').innerText = "EXIT FULLSCREEN";
-        } else {
-            document.exitFullscreen();
-            document.getElementById('fullscreenBtn').innerText = "ENTER FULLSCREEN";
-        }
-    }
-
+    function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    document.addEventListener('fullscreenchange', () => { document.getElementById('fullscreenBtn').innerText = document.fullscreenElement ? "EXIT FULLSCREEN" : "ENTER FULLSCREEN"; setTimeout(previewUI, 100); });
     function previewUI() {
-        const mIdx = document.getElementById("modelSelect").value;
-        const config = models[mIdx];
-        const isLandscape = window.innerWidth > window.innerHeight;
-        const cols = isLandscape ? config.lCols : config.pCols;
-        const renameEnabled = document.getElementById('renameModeCheck').checked;
-        
-        const grid = document.getElementById("mainGrid");
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        grid.innerHTML = "";
-        
+        const mIdx = document.getElementById("modelSelect").value, config = models[mIdx], isLandscape = window.innerWidth > window.innerHeight, cols = isLandscape ? config.lCols : config.pCols, renameEnabled = document.getElementById('renameModeCheck').checked;
+        const grid = document.getElementById("mainGrid"); grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`; grid.innerHTML = "";
         for (let i = 0; i < config.btns; i++) {
             const displayName = btnNames[i] || (i + 1);
-            grid.innerHTML += `
-            <div id="btn_${i}" class="btn ${renameEnabled ? 'edit-ready' : ''}" 
-                 onpointerdown="${renameEnabled ? '' : `setBit(${i},1)`}" 
-                 onpointerup="${renameEnabled ? '' : `setBit(${i},0)`}" 
-                 onpointerleave="${renameEnabled ? '' : `setBit(${i},0)`}"
-                 onclick="${renameEnabled ? `renameBtn(${i})` : ''}">
-                <div class="led-bar" style="display:${config.type==='ht'?'flex':'none'}">
-                    <div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div>
-                </div>
-                <span>${displayName}</span>
-            </div>`;
+            grid.innerHTML += `<div id="btn_${i}" class="btn ${renameEnabled ? 'edit-ready' : ''}" onpointerdown="${renameEnabled ? '' : `setBit(${i},1)`}" onpointerup="${renameEnabled ? '' : `setBit(${i},0)`}" onpointerleave="${renameEnabled ? '' : `setBit(${i},0)`}" onclick="${renameEnabled ? `renameBtn(${i})` : ''}"><div class="led-bar" id="bar_${i}" style="display:${config.type==='ht'?'flex':'none'}"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div><span>${displayName}</span></div>`;
         }
     }
-
-    function renameBtn(i) {
-        const oldName = btnNames[i] || (i + 1);
-        const newName = prompt(`Enter new name for Button ${i + 1}:`, oldName);
-        if (newName !== null) {
-            btnNames[i] = newName.substring(0, 10).toUpperCase();
-            localStorage.setItem('btnNames', JSON.stringify(btnNames));
-            previewUI();
-        }
-    }
-
-    function sendMask() {
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{});
-    }
-
-    function startPulse() {
-        if (!pulseInterval) {
-            pulseInterval = setInterval(() => {
-                if (globalMask > 0 && rxChar) sendMask();
-            }, 60); 
-        }
-    }
-
-    function stopPulse() {
-        if (globalMask === 0 && pulseInterval) {
-            clearInterval(pulseInterval);
-            pulseInterval = null;
-        }
-    }
-
-    function setBit(i, state) {
-        if (state) {
-            globalMask |= (1 << i);
-            startPulse();
-            sendMask();
-        } else {
-            globalMask &= ~(1 << i);
-            stopPulse();
-            sendMask();
-        }
-    }
-
-    function saveSettings() {
-        const mIdx = document.getElementById("modelSelect").value;
-        const side = document.getElementById("halSide").value;
-        const m = models[mIdx];
-        const type = (m.type === 'ht') ? 0 : 1;
-        let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : document.getElementById("nodeId").value;
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`));
-        closeMenu(); 
-        previewUI();
-    }
-
+    function renameBtn(i) { const oldName = btnNames[i] || (i + 1); const newName = prompt(`Rename Button ${i + 1}:`, oldName); if (newName !== null) { btnNames[i] = newName.substring(0, 10).toUpperCase(); localStorage.setItem('btnNames', JSON.stringify(btnNames)); previewUI(); } }
+    function sendMask() { if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{}); }
+    function setBit(i, state) { if (state) { globalMask |= (1 << i); if(!pulseInterval) pulseInterval = setInterval(() => { if(globalMask > 0) sendMask(); }, 60); sendMask(); } else { globalMask &= ~(1 << i); if(globalMask === 0) { clearInterval(pulseInterval); pulseInterval = null; } sendMask(); } }
+    function saveSettings() { const mIdx = document.getElementById("modelSelect").value, side = document.getElementById("halSide").value, m = models[mIdx], type = (m.type === 'ht') ? 0 : 1; let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : document.getElementById("nodeId").value; if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`)); closeMenu(); previewUI(); }
     function updateLEDs(data) {
-        const mIdx = document.getElementById("modelSelect").value;
-        const isRename = document.getElementById('renameModeCheck').checked;
+        const mIdx = document.getElementById("modelSelect").value, isBlink = models[mIdx].type === 'blink';
+        const colors = ["#181818","#ff0000","#00ff00","#0000ff","#ffff00","#00ffff","#ff00ff","#ffffff","#ff8800","#88ff00"];
         for (let i = 0; i < models[mIdx].btns; i++) {
-            const v = data[i]; const b = document.getElementById(`btn_${i}`); if (!b) continue;
-            if (models[mIdx].type === 'blink') {
-                b.className = "btn " + (isRename ? "edit-ready" : ""); 
-                if (v > 0 && v <= 7) b.classList.add("glow-" + v);
-            } else {
-                const g = document.getElementById(`g_${i}`); const y = document.getElementById(`y_${i}`); const r = document.getElementById(`r_${i}`);
-                if (g) g.className = "ind" + (v & 1 ? " g-on" : "");
-                if (y) y.className = "ind" + (v & 2 ? " y-on" : "");
-                if (r) r.className = "ind" + (v & 4 ? " r-on" : "");
-            }
+            const v = data[i], b = document.getElementById(`btn_${i}`); if (!b) continue;
+            if (isBlink) { b.style.borderColor = colors[v] || "#333"; b.style.boxShadow = v > 0 ? `0 0 15px ${colors[v]}` : "none"; }
+            else { const g = document.getElementById(`g_${i}`), y = document.getElementById(`y_${i}`), r = document.getElementById(`r_${i}`); if (g) g.className = "ind" + (v & 1 ? " g-on" : ""); if (y) y.className = "ind" + (v & 2 ? " y-on" : ""); if (r) r.className = "ind" + (v & 4 ? " r-on" : ""); }
         }
     }
-
-    function updateMenuOptions() {
-        const isHT = models[document.getElementById("modelSelect").value].type === 'ht';
-        document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none';
-        document.getElementById("nodeIdDiv").style.display = isHT ? 'none' : 'block';
-    }
+    function updateMenuOptions() { const isHT = models[document.getElementById("modelSelect").value].type === 'ht'; document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none'; document.getElementById("nodeIdDiv").style.display = isHT ? 'none' : 'block'; }
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
     previewUI();
