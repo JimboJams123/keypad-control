@@ -8,29 +8,25 @@
         body { background: #0b0b0b; color: #fff; font-family: -apple-system, sans-serif; text-align: center; margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #header { height: 60px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 0 15px; }
         .dots { font-size: 32px; cursor: pointer; color: #888; padding: 10px; }
-        
         .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 110px); }
-        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em; transition: transform 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
+        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: transform 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; }
         .btn:active { background: #2a2a2a; transform: scale(0.96); border-color: #555; }
+        .btn.edit-mode { border-style: dashed; border-color: #0066ff; color: #0066ff; }
         
-        /* Haltech LED Indicators */
         .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; pointer-events: none; }
         .ind { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #000; }
         .g-on { background: #0f0 !important; box-shadow: 0 0 12px #0f0; }
         .y-on { background: #ffea00 !important; box-shadow: 0 0 12px #ffea00; }
         .r-on { background: #f00 !important; box-shadow: 0 0 12px #f00; }
         
-        /* Blink RGB Colors */
-        .glow-1 { border-color: #0f0 !important; box-shadow: 0 0 15px #0f0; }
-        .glow-4 { border-color: #f00 !important; box-shadow: 0 0 15px #f00; }
-
         #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
-        #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; }
-        
+        #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; padding-bottom: 40px; }
         .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: 20px auto; text-align: left; border: 1px solid #333; }
         .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 1.1em; margin-top: 15px; cursor: pointer; }
         label { font-size: 0.75em; color: #888; margin-top: 15px; display: block; font-weight: bold; text-transform: uppercase; }
-        select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
+        input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.5); }
     </style>
 </head>
 <body onresize="previewUI()">
@@ -60,6 +56,17 @@
             </select>
             <div id="haltechOnly" style="display:none;"><label>Keypad Assignment</label><select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select></div>
             <div id="nodeIdDiv"><label>Node ID (Hex)</label><input type="text" id="nodeId" value="15"></div>
+            
+            <div class="switch-row">
+                <label style="margin:0">Haptic Feedback</label>
+                <input type="checkbox" id="hapticCheck" checked>
+            </div>
+
+            <div class="switch-row">
+                <label style="margin:0; color:#0066ff;">Enable Rename Mode</label>
+                <input type="checkbox" id="renameModeCheck" onchange="previewUI()">
+            </div>
+
             <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
             <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Cancel</p>
         </div>
@@ -73,6 +80,7 @@
     let rxChar, bleDevice;
     let globalMask = 0;
     let pulseInterval = null;
+    let btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
 
     const models = [
         { name: "Haltech 2x4", btns: 8, pCols: 2, lCols: 4, type: 'ht' },
@@ -91,9 +99,7 @@
             rxChar = await service.getCharacteristic(RX_UUID);
             const txChar = await service.getCharacteristic(TX_UUID);
             await txChar.startNotifications();
-            txChar.addEventListener('characteristicvaluechanged', (e) => {
-                updateLEDs(new Uint8Array(e.target.value.buffer));
-            });
+            txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); });
             document.getElementById('connectOverlay').style.display = 'none';
             saveSettings(); 
         } catch (e) { console.error(e); }
@@ -104,18 +110,36 @@
         const config = models[mIdx];
         const isLandscape = window.innerWidth > window.innerHeight;
         const cols = isLandscape ? config.lCols : config.pCols;
+        const renameMode = document.getElementById('renameModeCheck').checked;
+        
         document.getElementById("keypadTitle").innerText = config.name;
         const grid = document.getElementById("mainGrid");
         grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         grid.innerHTML = "";
+        
         for (let i = 0; i < config.btns; i++) {
+            const displayName = btnNames[i] || (i + 1);
             grid.innerHTML += `
-            <div id="btn_${i}" class="btn" onpointerdown="setBit(${i},1)" onpointerup="setBit(${i},0)" onpointerleave="setBit(${i},0)">
+            <div id="btn_${i}" class="btn ${renameMode ? 'edit-mode' : ''}" 
+                 onpointerdown="${renameMode ? '' : `setBit(${i},1)`}" 
+                 onpointerup="${renameMode ? '' : `setBit(${i},0)`}" 
+                 onpointerleave="${renameMode ? '' : `setBit(${i},0)`}"
+                 onclick="${renameMode ? `renameBtn(${i})` : ''}">
                 <div class="led-bar" style="display:${config.type==='ht'?'flex':'none'}">
                     <div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div>
                 </div>
-                <span>${i + 1}</span>
+                <span>${displayName}</span>
             </div>`;
+        }
+    }
+
+    function renameBtn(i) {
+        const oldName = btnNames[i] || (i + 1);
+        const newName = prompt(`Enter name for Button ${i + 1}:`, oldName);
+        if (newName !== null) {
+            btnNames[i] = newName.substring(0, 10); // Limit to 10 chars
+            localStorage.setItem('btnNames', JSON.stringify(btnNames));
+            previewUI();
         }
     }
 
@@ -137,14 +161,20 @@
     }
 
     function setBit(i, state) {
+        const isHaptic = document.getElementById('hapticCheck').checked;
         if (state) {
+            if (!(globalMask & (1 << i))) {
+                if (isHaptic && navigator.vibrate) navigator.vibrate(15);
+            }
             globalMask |= (1 << i);
             startPulse();
             if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{});
         } else {
+            if (globalMask & (1 << i)) {
+                if (isHaptic && navigator.vibrate) navigator.vibrate(5);
+            }
             globalMask &= ~(1 << i);
             stopPulse();
-            // Send final release immediately
             if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{});
         }
     }
@@ -155,6 +185,10 @@
         const side = document.getElementById("halSide").value;
         const type = (m.type === 'ht') ? 0 : 1;
         let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : document.getElementById("nodeId").value;
+        
+        // Turn off rename mode on save
+        document.getElementById('renameModeCheck').checked = false;
+
         if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`));
         closeMenu(); previewUI();
     }
@@ -173,6 +207,7 @@
             }
         }
     }
+
     function updateMenuOptions() {
         const isHT = models[document.getElementById("modelSelect").value].type === 'ht';
         document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none';
