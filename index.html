@@ -8,16 +8,13 @@
         body { background: #0b0b0b; color: #fff; font-family: -apple-system, sans-serif; text-align: center; margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #header { height: 60px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 0 15px; }
         .dots { font-size: 32px; cursor: pointer; color: #888; padding: 10px; }
-        
-        .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 110px); }
+        .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; height: calc(100vh - 110px); }
         .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em; transition: transform 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
         .btn:active { background: #2a2a2a; transform: scale(0.96); border-color: #555; }
         
-        /* LED Indicators */
+        /* Haltech LED Indicators */
         .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; pointer-events: none; }
         .ind { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #000; }
-        
-        /* Haltech Colors */
         .g-on { background: #0f0 !important; box-shadow: 0 0 12px #0f0; }
         .y-on { background: #ffea00 !important; box-shadow: 0 0 12px #ffea00; }
         .r-on { background: #f00 !important; box-shadow: 0 0 12px #f00; }
@@ -31,11 +28,10 @@
         .glow-6 { border-color: #ffea00 !important; box-shadow: 0 0 15px #ffea00; }
         .glow-7 { border-color: #fff !important; box-shadow: 0 0 15px #fff; }
 
-        #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
         #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; }
-        
         .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: 20px auto; text-align: left; border: 1px solid #333; }
-        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 1.1em; margin-top: 15px; cursor: pointer; }
+        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 15px; cursor: pointer; }
         label { font-size: 0.75em; color: #888; margin-top: 15px; display: block; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
     </style>
@@ -43,7 +39,6 @@
 <body onresize="previewUI()">
 
     <div id="connectOverlay">
-        <h2 style="margin-bottom:30px;">PT Motorsport Pro</h2>
         <button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:12px; font-weight:bold; font-size:1.2em;" onclick="initBLE()">CONNECT KEYPAD</button>
     </div>
 
@@ -66,20 +61,8 @@
                 <option value="4">PKP-2500-SI</option>
                 <option value="5">PKP-3500-SI</option>
             </select>
-
-            <div id="haltechOnly" style="display:none;">
-                <label>Keypad Assignment</label>
-                <select id="halSide">
-                    <option value="A">Keypad A</option>
-                    <option value="B">Keypad B</option>
-                </select>
-            </div>
-
-            <div id="nodeIdDiv">
-                <label>Node ID (Hex)</label>
-                <input type="text" id="nodeId" value="15">
-            </div>
-
+            <div id="haltechOnly" style="display:none;"><label>Keypad Assignment</label><select id="halSide"><option value="A">Keypad A</option><option value="B">Keypad B</option></select></div>
+            <div id="nodeIdDiv"><label>Node ID (Hex)</label><input type="text" id="nodeId" value="15"></div>
             <button class="save-btn" onclick="saveSettings()">SAVE & APPLY</button>
             <p onclick="closeMenu()" style="text-align:center; color:#555; cursor:pointer; margin-top:20px">Cancel</p>
         </div>
@@ -104,20 +87,13 @@
 
     async function initBLE() {
         try {
-            bleDevice = await navigator.bluetooth.requestDevice({ 
-                acceptAllDevices: true, 
-                optionalServices: [SERVICE_UUID] 
-            });
+            bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
             const server = await bleDevice.gatt.connect();
             const service = await server.getPrimaryService(SERVICE_UUID);
             rxChar = await service.getCharacteristic(RX_UUID);
             const txChar = await service.getCharacteristic(TX_UUID);
-            
             await txChar.startNotifications();
-            txChar.addEventListener('characteristicvaluechanged', (e) => {
-                updateLEDs(new Uint8Array(e.target.value.buffer));
-            });
-            
+            txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); });
             document.getElementById('connectOverlay').style.display = 'none';
             saveSettings(); 
         } catch (e) { console.error(e); }
@@ -128,19 +104,15 @@
         const config = models[mIdx];
         const isLandscape = window.innerWidth > window.innerHeight;
         const cols = isLandscape ? config.lCols : config.pCols;
-        
         document.getElementById("keypadTitle").innerText = config.name;
         const grid = document.getElementById("mainGrid");
         grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         grid.innerHTML = "";
-        
         for (let i = 0; i < config.btns; i++) {
             grid.innerHTML += `
             <div id="btn_${i}" class="btn" onpointerdown="setBit(${i},1)" onpointerup="setBit(${i},0)" onpointerleave="setBit(${i},0)">
                 <div class="led-bar" style="display:${config.type==='ht'?'flex':'none'}">
-                    <div id="g_${i}" class="ind"></div>
-                    <div id="y_${i}" class="ind"></div>
-                    <div id="r_${i}" class="ind"></div>
+                    <div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div>
                 </div>
                 <span>${i + 1}</span>
             </div>`;
@@ -148,68 +120,45 @@
     }
 
     function setBit(i, state) {
-        if (state) globalMask |= (1 << i); 
-        else globalMask &= ~(1 << i);
-        
+        if (state) globalMask |= (1 << i); else globalMask &= ~(1 << i);
         if (rxChar) {
-            // Sending "S" followed by the decimal bitmask
-            const data = new TextEncoder().encode("S" + globalMask);
-            rxChar.writeValue(data).catch(()=>{});
+            // CRITICAL: Sends 'S' prefix + decimal bitmask
+            rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{});
         }
     }
 
     function saveSettings() {
         const mIdx = document.getElementById("modelSelect").value;
-        const m = models[mIdx];
         const side = document.getElementById("halSide").value;
-        const type = (m.type === 'ht') ? 0 : 1;
+        const type = (models[mIdx].type === 'ht') ? 0 : 1;
         let inst = "15";
-        
-        if (type === 0) {
-            // Smart auto-selection of Haltech Instance ID
-            inst = (mIdx == "0") ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D");
-        } else {
-            inst = document.getElementById("nodeId").value;
-        }
-        
-        const packet = `C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`;
-        if (rxChar) {
-            rxChar.writeValue(new TextEncoder().encode(packet));
-        }
-        closeMenu(); 
-        previewUI();
+        if (type === 0) inst = (mIdx == "0") ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D");
+        else inst = document.getElementById("nodeId").value;
+        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`));
+        closeMenu(); previewUI();
     }
 
     function updateLEDs(data) {
-        const m = models[document.getElementById("modelSelect").value];
-        for (let i = 0; i < m.btns; i++) {
-            const v = data[i]; 
-            const b = document.getElementById(`btn_${i}`); 
-            if (!b) continue;
-            
-            if (m.type === 'blink') {
-                b.className = "btn"; 
-                if (v > 0 && v <= 7) b.classList.add("glow-" + v);
+        const mIdx = document.getElementById("modelSelect").value;
+        for (let i = 0; i < models[mIdx].btns; i++) {
+            const v = data[i]; const b = document.getElementById(`btn_${i}`); if (!b) continue;
+            if (models[mIdx].type === 'blink') {
+                b.className = "btn"; if (v > 0 && v <= 7) b.classList.add("glow-" + v);
             } else {
-                const g = document.getElementById(`g_${i}`);
-                const y = document.getElementById(`y_${i}`);
-                const r = document.getElementById(`r_${i}`);
+                const g = document.getElementById(`g_${i}`); const y = document.getElementById(`y_${i}`); const r = document.getElementById(`r_${i}`);
                 if (g) g.className = "ind" + (v & 1 ? " g-on" : "");
                 if (y) y.className = "ind" + (v & 2 ? " y-on" : "");
                 if (r) r.className = "ind" + (v & 4 ? " r-on" : "");
             }
         }
     }
-
     function updateMenuOptions() {
-        const m = models[document.getElementById("modelSelect").value];
-        document.getElementById("haltechOnly").style.display = (m.type === 'ht') ? 'block' : 'none';
-        document.getElementById("nodeIdDiv").style.display = (m.type === 'ht') ? 'none' : 'block';
+        const isHT = models[document.getElementById("modelSelect").value].type === 'ht';
+        document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none';
+        document.getElementById("nodeIdDiv").style.display = isHT ? 'none' : 'block';
     }
-
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
-    
     previewUI();
 </script>
 </body>
