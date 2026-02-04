@@ -11,7 +11,7 @@
         .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 110px); }
         .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; }
         .btn:active { background: #2a2a2a; transform: scale(0.96); }
-        .btn.edit-ready { border-color: #0066ff !important; border-style: dashed !important; box-shadow: none !important; }
+        .btn.edit-ready { border-color: #0066ff !important; border-style: dashed !important; }
         .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; }
         .ind { width: 10px; height: 10px; border-radius: 50%; background: #222; }
         .g-on { background: #0f0 !important; box-shadow: 0 0 10px #0f0; }
@@ -45,8 +45,23 @@
     </div>
 <script>
     const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-    let rxChar, bleDevice, globalMask = 0, pulseInterval = null, btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
+    let rxChar, bleDevice, globalMask = 0, pulseInterval = null;
+    
+    // Load Saved Data
+    let btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
+    let savedSettings = JSON.parse(localStorage.getItem('pt-settings')) || { model:0, node:"15", side:"A" };
+
     const models = [{name:"Haltech 2x4",btns:8,pCols:2,lCols:4,type:'ht'},{name:"Haltech 3x5",btns:15,pCols:3,lCols:5,type:'ht'},{name:"PKP-2300-SI",btns:6,pCols:2,lCols:3,type:'blink'},{name:"PKP-2400-SI",btns:8,pCols:2,lCols:4,type:'blink'},{name:"PKP-2500-SI",btns:10,pCols:2,lCols:5,type:'blink'},{name:"PKP-3500-SI",btns:15,pCols:3,lCols:5,type:'blink'}];
+
+    // Apply Saved Settings to Menu on load
+    window.onload = () => {
+        document.getElementById("modelSelect").value = savedSettings.model;
+        document.getElementById("nodeId").value = savedSettings.node;
+        document.getElementById("halSide").value = savedSettings.side;
+        updateMenuOptions();
+        previewUI();
+    };
+
     async function initBLE() {
         try { bleDevice = await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE_UUID]}); const server = await bleDevice.gatt.connect(); const service = await server.getPrimaryService(SERVICE_UUID); rxChar = await service.getCharacteristic(RX_UUID); const txChar = await service.getCharacteristic(TX_UUID); await txChar.startNotifications(); txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); }); document.getElementById('connectOverlay').style.display = 'none'; saveSettings(); } catch (e) { console.error(e); }
     }
@@ -63,7 +78,22 @@
     function renameBtn(i) { const oldName = btnNames[i] || (i + 1); const newName = prompt(`Rename Button ${i + 1}:`, oldName); if (newName !== null) { btnNames[i] = newName.substring(0, 10).toUpperCase(); localStorage.setItem('btnNames', JSON.stringify(btnNames)); previewUI(); } }
     function sendMask() { if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{}); }
     function setBit(i, state) { if (state) { globalMask |= (1 << i); if(!pulseInterval) pulseInterval = setInterval(() => { if(globalMask > 0) sendMask(); }, 60); sendMask(); } else { globalMask &= ~(1 << i); if(globalMask === 0) { clearInterval(pulseInterval); pulseInterval = null; } sendMask(); } }
-    function saveSettings() { const mIdx = document.getElementById("modelSelect").value, side = document.getElementById("halSide").value, m = models[mIdx], type = (m.type === 'ht') ? 0 : 1; let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : document.getElementById("nodeId").value; if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${document.getElementById("nodeId").value},${type},${inst},3`)); closeMenu(); previewUI(); }
+    
+    function saveSettings() {
+        const mIdx = document.getElementById("modelSelect").value;
+        const node = document.getElementById("nodeId").value;
+        const side = document.getElementById("halSide").value;
+        const m = models[mIdx];
+        const type = (m.type === 'ht') ? 0 : 1;
+
+        // Save to Phone Browser Memory
+        localStorage.setItem('pt-settings', JSON.stringify({ model: mIdx, node: node, side: side }));
+
+        let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : node;
+        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${node},${type},${inst},3`));
+        closeMenu(); previewUI();
+    }
+
     function updateLEDs(data) {
         const mIdx = document.getElementById("modelSelect").value, isBlink = models[mIdx].type === 'blink';
         const colors = ["#181818","#ff0000","#00ff00","#0000ff","#ffff00","#00ffff","#ff00ff","#ffffff","#ff8800","#88ff00"];
@@ -76,7 +106,6 @@
     function updateMenuOptions() { const isHT = models[document.getElementById("modelSelect").value].type === 'ht'; document.getElementById("haltechOnly").style.display = isHT ? 'block' : 'none'; document.getElementById("nodeIdDiv").style.display = isHT ? 'none' : 'block'; }
     function openMenu() { document.getElementById("settingsOverlay").style.display = "block"; updateMenuOptions(); }
     function closeMenu() { document.getElementById("settingsOverlay").style.display = "none"; }
-    previewUI();
 </script>
 </body>
 </html>
