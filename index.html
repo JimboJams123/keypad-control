@@ -27,7 +27,7 @@
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
     </style>
 </head>
-<body>
+<body onload="restoreAll()">
     <div id="connectOverlay"><button style="background:#0066ff; color:#fff; padding:20px 40px; border:none; border-radius:12px; font-weight:bold;" onclick="initBLE()">CONNECT KEYPAD</button></div>
     <div id="header"><div style="width:40px"></div><h3 id="keypadTitle" style="margin:0;">PT MOTORSPORT</h3><span class="dots" onclick="openMenu()">&#8942;</span></div>
     <div id="mainGrid" class="grid"></div>
@@ -46,27 +46,25 @@
 <script>
     const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
     let rxChar, bleDevice, globalMask = 0, pulseInterval = null;
-    
-    // Load Saved Data
-    let btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
-    let savedSettings = JSON.parse(localStorage.getItem('pt-settings')) || { model:0, node:"15", side:"A" };
-
+    let btnNames = {};
     const models = [{name:"Haltech 2x4",btns:8,pCols:2,lCols:4,type:'ht'},{name:"Haltech 3x5",btns:15,pCols:3,lCols:5,type:'ht'},{name:"PKP-2300-SI",btns:6,pCols:2,lCols:3,type:'blink'},{name:"PKP-2400-SI",btns:8,pCols:2,lCols:4,type:'blink'},{name:"PKP-2500-SI",btns:10,pCols:2,lCols:5,type:'blink'},{name:"PKP-3500-SI",btns:15,pCols:3,lCols:5,type:'blink'}];
 
-    // Apply Saved Settings to Menu on load
-    window.onload = () => {
-        document.getElementById("modelSelect").value = savedSettings.model;
-        document.getElementById("nodeId").value = savedSettings.node;
-        document.getElementById("halSide").value = savedSettings.side;
+    function restoreAll() {
+        btnNames = JSON.parse(localStorage.getItem('btnNames')) || {};
+        let settings = JSON.parse(localStorage.getItem('pt-settings')) || { model:0, node:"15", side:"A" };
+        document.getElementById("modelSelect").value = settings.model;
+        document.getElementById("nodeId").value = settings.node;
+        document.getElementById("halSide").value = settings.side;
         updateMenuOptions();
         previewUI();
-    };
+    }
 
     async function initBLE() {
-        try { bleDevice = await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE_UUID]}); const server = await bleDevice.gatt.connect(); const service = await server.getPrimaryService(SERVICE_UUID); rxChar = await service.getCharacteristic(RX_UUID); const txChar = await service.getCharacteristic(TX_UUID); await txChar.startNotifications(); txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); }); document.getElementById('connectOverlay').style.display = 'none'; saveSettings(); } catch (e) { console.error(e); }
+        try { bleDevice = await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE_UUID]}); const server = await bleDevice.gatt.connect(); const service = await server.getPrimaryService(SERVICE_UUID); rxChar = await service.getCharacteristic(RX_UUID); const txChar = await service.getCharacteristic(TX_UUID); await txChar.startNotifications(); txChar.addEventListener('characteristicvaluechanged', (e) => { updateLEDs(new Uint8Array(e.target.value.buffer)); }); document.getElementById('connectOverlay').style.display = 'none'; syncToHardware(); } catch (e) { console.error(e); }
     }
+
     function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-    document.addEventListener('fullscreenchange', () => { document.getElementById('fullscreenBtn').innerText = document.fullscreenElement ? "EXIT FULLSCREEN" : "ENTER FULLSCREEN"; setTimeout(previewUI, 100); });
+    
     function previewUI() {
         const mIdx = document.getElementById("modelSelect").value, config = models[mIdx], isLandscape = window.innerWidth > window.innerHeight, cols = isLandscape ? config.lCols : config.pCols, renameEnabled = document.getElementById('renameModeCheck').checked;
         const grid = document.getElementById("mainGrid"); grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`; grid.innerHTML = "";
@@ -75,6 +73,7 @@
             grid.innerHTML += `<div id="btn_${i}" class="btn ${renameEnabled ? 'edit-ready' : ''}" onpointerdown="${renameEnabled ? '' : `setBit(${i},1)`}" onpointerup="${renameEnabled ? '' : `setBit(${i},0)`}" onpointerleave="${renameEnabled ? '' : `setBit(${i},0)`}" onclick="${renameEnabled ? `renameBtn(${i})` : ''}"><div class="led-bar" id="bar_${i}" style="display:${config.type==='ht'?'flex':'none'}"><div id="g_${i}" class="ind"></div><div id="y_${i}" class="ind"></div><div id="r_${i}" class="ind"></div></div><span>${displayName}</span></div>`;
         }
     }
+
     function renameBtn(i) { const oldName = btnNames[i] || (i + 1); const newName = prompt(`Rename Button ${i + 1}:`, oldName); if (newName !== null) { btnNames[i] = newName.substring(0, 10).toUpperCase(); localStorage.setItem('btnNames', JSON.stringify(btnNames)); previewUI(); } }
     function sendMask() { if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{}); }
     function setBit(i, state) { if (state) { globalMask |= (1 << i); if(!pulseInterval) pulseInterval = setInterval(() => { if(globalMask > 0) sendMask(); }, 60); sendMask(); } else { globalMask &= ~(1 << i); if(globalMask === 0) { clearInterval(pulseInterval); pulseInterval = null; } sendMask(); } }
@@ -83,15 +82,21 @@
         const mIdx = document.getElementById("modelSelect").value;
         const node = document.getElementById("nodeId").value;
         const side = document.getElementById("halSide").value;
+        localStorage.setItem('pt-settings', JSON.stringify({ model: mIdx, node: node, side: side }));
+        syncToHardware();
+        closeMenu(); 
+        previewUI();
+    }
+
+    function syncToHardware() {
+        if (!rxChar) return;
+        const mIdx = document.getElementById("modelSelect").value;
+        const node = document.getElementById("nodeId").value;
+        const side = document.getElementById("halSide").value;
         const m = models[mIdx];
         const type = (m.type === 'ht') ? 0 : 1;
-
-        // Save to Phone Browser Memory
-        localStorage.setItem('pt-settings', JSON.stringify({ model: mIdx, node: node, side: side }));
-
         let inst = (type === 0) ? (mIdx == "0" ? (side === "A" ? "0A" : "0B") : (side === "A" ? "0C" : "0D")) : node;
-        if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${node},${type},${inst},3`));
-        closeMenu(); previewUI();
+        rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${node},${type},${inst},3`));
     }
 
     function updateLEDs(data) {
