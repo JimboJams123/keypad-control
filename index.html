@@ -9,7 +9,8 @@
         #header { height: 60px; background: #1a1a1a; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 0 15px; }
         .dots { font-size: 32px; cursor: pointer; color: #888; padding: 10px; }
         .grid { display: grid; gap: 12px; padding: 15px; box-sizing: border-box; flex-grow: 1; width: 100%; height: calc(100vh - 110px); }
-        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; transition: 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; }
+        .btn { background: #181818; border: 2px solid #333; border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.05s; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; overflow: hidden; text-transform: uppercase; padding: 5px; }
+        .btn span { display: block; width: 100%; font-size: clamp(0.7rem, 4vw, 1.1rem); line-height: 1.1; word-wrap: break-word; overflow-wrap: break-word; }
         .btn:active { background: #2a2a2a; transform: scale(0.96); }
         .btn.edit-ready { border-color: #0066ff !important; border-style: dashed !important; }
         .led-bar { display: none; gap: 6px; position: absolute; top: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 20px; }
@@ -20,8 +21,8 @@
         #connectOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: flex; align-items: center; justify-content: center; }
         #settingsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0b0b; z-index: 100; overflow-y: auto; padding-bottom: 40px; }
         .menu-box { background: #1a1a1a; padding: 25px; border-radius: 15px; width: 85%; max-width: 400px; margin: 20px auto; text-align: left; border: 1px solid #333; }
-        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 15px; }
-        .fs-btn { background: #333; color: white; border: 1px solid #444; padding: 12px; width: 100%; border-radius: 8px; margin-top: 20px; }
+        .save-btn { background: #0066ff; color: white; border: none; padding: 18px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 15px; cursor: pointer; }
+        .fs-btn { background: #333; color: white; border: 1px solid #444; padding: 12px; width: 100%; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         label { font-size: 0.75em; color: #888; margin-top: 15px; display: block; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin: 8px 0 15px 0; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; }
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
@@ -45,8 +46,7 @@
     </div>
 <script>
     const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-    let rxChar, bleDevice, globalMask = 0, pulseInterval = null;
-    let btnNames = {};
+    let rxChar, bleDevice, globalMask = 0, pulseInterval = null, btnNames = {}, configReceived = false;
     const models = [{name:"Haltech 2x4",btns:8,pCols:2,lCols:4,type:'ht'},{name:"Haltech 3x5",btns:15,pCols:3,lCols:5,type:'ht'},{name:"PKP-2300-SI",btns:6,pCols:2,lCols:3,type:'blink'},{name:"PKP-2400-SI",btns:8,pCols:2,lCols:4,type:'blink'},{name:"PKP-2500-SI",btns:10,pCols:2,lCols:5,type:'blink'},{name:"PKP-3500-SI",btns:15,pCols:3,lCols:5,type:'blink'}];
 
     async function initBLE() {
@@ -59,22 +59,25 @@
             await txChar.startNotifications(); 
             txChar.addEventListener('characteristicvaluechanged', (e) => { 
                 const data = new TextDecoder().decode(e.target.value);
-                if(data.startsWith("K,")) parseRemoteConfig(data);
+                if(data.startsWith("K,")) { configReceived = true; parseRemoteConfig(data); }
                 else updateLEDs(new Uint8Array(e.target.value.buffer)); 
             }); 
             document.getElementById('connectOverlay').style.display = 'none'; 
-            rxChar.writeValue(new TextEncoder().encode("R")); // Request Config from ESP32
+            rxChar.writeValue(new TextEncoder().encode("R")); 
+
+            // Safety fallback: if no config in 2 seconds, draw default
+            setTimeout(() => { if(!configReceived) { updateMenuOptions(); previewUI(); } }, 2000);
         } catch (e) { console.error(e); }
     }
 
     function parseRemoteConfig(data) {
         const parts = data.substring(2).split('|');
         const sys = parts[0].split(',');
-        const names = parts[1].split(',');
-        document.getElementById("modelSelect").value = sys[0];
-        document.getElementById("nodeId").value = sys[1];
-        document.getElementById("halSide").value = sys[3];
-        names.forEach((n, i) => btnNames[i] = n);
+        const names = (parts[1] || "").split(',');
+        document.getElementById("modelSelect").value = sys[0] || 0;
+        document.getElementById("nodeId").value = sys[1] || "15";
+        document.getElementById("halSide").value = sys[3] || "A";
+        names.forEach((n, i) => { if(n) btnNames[i] = n; });
         updateMenuOptions(); previewUI();
     }
 
@@ -91,22 +94,21 @@
         const oldName = btnNames[i] || (i + 1); 
         const newName = prompt(`Rename Button ${i + 1}:`, oldName); 
         if (newName !== null) { 
-            btnNames[i] = newName.substring(0, 10).toUpperCase(); 
-            rxChar.writeValue(new TextEncoder().encode(`N,${i},${btnNames[i]}`)); // Save Name to ESP32
+            const cleanName = newName.substring(0, 15).toUpperCase(); 
+            btnNames[i] = cleanName;
+            rxChar.writeValue(new TextEncoder().encode(`N,${i},${cleanName}`)).catch(()=>{}); 
             previewUI(); 
         } 
     }
     function sendMask() { if (rxChar) rxChar.writeValue(new TextEncoder().encode("S" + globalMask)).catch(()=>{}); }
     function setBit(i, state) { if (state) { globalMask |= (1 << i); if(!pulseInterval) pulseInterval = setInterval(() => { if(globalMask > 0) sendMask(); }, 60); sendMask(); } else { globalMask &= ~(1 << i); if(globalMask === 0) { clearInterval(pulseInterval); pulseInterval = null; } sendMask(); } }
-    
     function saveSettings() {
         const mIdx = document.getElementById("modelSelect").value, node = document.getElementById("nodeId").value, side = document.getElementById("halSide").value, m = models[mIdx], type = (m.type === 'ht') ? 0 : 1;
         if (rxChar) rxChar.writeValue(new TextEncoder().encode(`C,${mIdx},${node},${type},${side},3`));
         closeMenu(); previewUI();
     }
-
     function updateLEDs(data) {
-        if(data.length < 1) return;
+        if(data.length < 1 || data.length > 15) return;
         const mIdx = document.getElementById("modelSelect").value, isBlink = models[mIdx].type === 'blink';
         const colors = ["#181818","#ff0000","#00ff00","#0000ff","#ffff00","#00ffff","#ff00ff","#ffffff","#ff8800","#88ff00"];
         for (let i = 0; i < models[mIdx].btns; i++) {
